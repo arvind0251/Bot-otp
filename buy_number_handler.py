@@ -5,12 +5,33 @@ from config import BOT_TOKEN, FIVESIM_API_KEY
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+COUNTRY_CODES = {
+    "ru": "russia",
+    "us": "usa",
+    "gb": "united-kingdom",
+    "in": "india",
+    "ca": "canada"
+}
+
 @bot.message_handler(commands=['buy_number'])
 def buy_number(message):
     user_id = message.chat.id
+    args = message.text.split()
+
+    if len(args) < 2:
+        bot.send_message(user_id, "❌ Invalid Format! Use: /buy_number country_code\nExample: /buy_number us")
+        return
+
+    country_code = args[1].lower()
+
+    if country_code not in COUNTRY_CODES:
+        bot.send_message(user_id, "❌ Invalid country code! Supported: ru, us, gb, in, ca")
+        return
+
+    country = COUNTRY_CODES[country_code]
+    
     conn = db_connect()
     cursor = conn.cursor()
-
     cursor.execute("SELECT balance FROM users WHERE telegram_id=?", (user_id,))
     user = cursor.fetchone()
 
@@ -18,7 +39,7 @@ def buy_number(message):
         response = requests.get(
             "https://5sim.net/v1/user/buy/activation",
             headers={"Authorization": f"Bearer {FIVESIM_API_KEY}"},
-            params={"country": "russia", "operator": "any", "product": "telegram"}
+            params={"country": country, "operator": "any", "product": "telegram"}
         )
 
         data = response.json()
